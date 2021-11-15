@@ -1,0 +1,11 @@
+<launch>
+
+  <rosparam file="$(find autonomous_turtlebot3)/params/minimal.yaml" command="load" ns="/move_base/local_costmap" />
+  <param value="0" type="int" name="/move_base/DWAPlannerROS/min_vel_x" />
+  <!-- <include file="$(find turtlebot3_gazebo)/launch/turtlebot3_autorace_2020.launch" /> -->
+  <include file="$(find turtlebot3_navigation)/launch/turtlebot3_navigation.launch">
+    <arg name="map_file" value="$(find autonomous_turtlebot3)/maps/autorace_map.yaml" />
+  </include>
+  <node name="lane_to_pointcloud" pkg="autonomous_turtlebot3" type="lane_to_pointcloud.py" />
+
+</launch>

@@ -1,0 +1,3 @@
+/home/maverick/ros_ws/src/autonomous_turtlebot3/calib/chessboard_images/board_on_ground1.png
+/home/maverick/ros_ws/src/autonomous_turtlebot3/calib/chessboard_images/square.png
+/home/maverick/ros_ws/src/autonomous_turtlebot3/calib/chessboard_images/board_on_ground.png

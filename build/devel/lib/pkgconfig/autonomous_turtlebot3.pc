@@ -1,0 +1,8 @@
+prefix=/home/maverick/ros_ws/src/autonomous_turtlebot3/build/devel
+
+Name: autonomous_turtlebot3
+Description: Description of autonomous_turtlebot3
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

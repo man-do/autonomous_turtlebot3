@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/maverick/ros_ws/src/autonomous_turtlebot3/build/devel/setup.sh

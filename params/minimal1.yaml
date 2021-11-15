@@ -1,0 +1,62 @@
+footprint: "[[-0.105,-0.105],[-0.105,0.105],[0.041,0.105],[0.041,-0.105]]"
+footprint_padding: 0.01
+global_frame: odom
+height: 3
+
+inflation_layer:
+  cost_scaling_factor: 3.0
+  enabled: true
+  inflate_unknown: false
+  inflation_radius: 1.0
+map_type: costmap
+
+obstacle_layer:
+  combination_method: 1
+  enabled: true
+  footprint_clearing_enabled: true
+  max_obstacle_height: 2.0
+  observation_sources: scan
+  obstacle_range: 3.0
+  raytrace_range: 3.5
+  scan:
+    clearing: true
+    data_type: LaserScan
+    marking: true
+    sensor_frame: base_scan
+    topic: scan
+
+lanes_layer:
+  combination_method: 1
+  enabled: true
+  footprint_clearing_enabled: true
+  max_obstacle_height: 2.0
+  observation_sources: IPM_pointcloud
+  obstacle_range: 3.0
+  raytrace_range: 3.5
+  IPM_pointcloud:
+    clearing: true
+    data_type: PointCloud2
+    marking: true
+    sensor_frame: base_scan
+    topic: IPM_pointcloud
+
+origin_x: 0.0
+origin_y: 0.0
+
+plugins:
+  - name: obstacle_layer
+    type: costmap_2d::ObstacleLayer
+  - name: inflation_layer
+    type: costmap_2d::InflationLayer
+  - name: lanes_layer
+    type: costmap_2d::ObstacleLayer
+
+publish_frequency: 10.0
+resolution: 0.05
+robot_base_frame: base_footprint
+robot_radius: 0.46
+rolling_window: true
+static_map: false
+transform_tolerance: 0.5
+update_frequency: 10.0
+width: 3
