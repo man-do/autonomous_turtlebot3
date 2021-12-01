@@ -1,4 +1,5 @@
-#! usr/bin/env/python3
+#! /usr/bin/env/python3
+
 import numpy as np
 from cv2 import cv2
 import pandas as pd
@@ -10,10 +11,9 @@ from geometry_msgs.msg import Point
 from sensor_msgs.msg import PointCloud2, PointField
 import rospkg
 from cv_bridge import CvBridge, CvBridgeError
-import math
 
 
-class lane_to_pointcloud():
+class LaneDetector():
     def __init__(self):
         # Read the matrices needed for undistortion
         self.rospack = rospkg.RosPack()
@@ -29,15 +29,8 @@ class lane_to_pointcloud():
         self.dist = np.asarray(self.dist)
         self.bridge = CvBridge()
         self.board_on_ground = cv2.imread(
-            self.path+'/calib/chessboard_images/board_on_ground1.png')
+            self.path+'/calib/chessboard_images/board_on_ground.png')
         self.h_mtx = self.ipm_homography(self.board_on_ground)
-
-        # subscriber
-        self.sub = rospy.Subscriber("camera/image", Image, self.video_callback)
-        # publisher
-        self.pub = rospy.Publisher(
-            'IPM_pointcloud', PointCloud2, queue_size=2)
-        self.img_pub = rospy.Publisher('video_ipm', Image, queue_size=2)
 
     def ipm_homography(self, image):
         # Find homography matrix for ipm
@@ -65,33 +58,32 @@ class lane_to_pointcloud():
             pts1 = corners[pts1_index]
             pts2 = np.arange(8, dtype='float32').reshape(4, 1, 2)
 
-            pts2[0][0][0] = pts1[0][0][0]+190
-            pts2[0][0][1] = pts1[0][0][1]+300
+            pts2[1][0][1] = pts1[1][0][1]
+            pts2[1][0][0] = pts1[1][0][0]
 
-            pts2[1][0][0] = pts1[1][0][0]+190
-            pts2[1][0][1] = pts1[1][0][1]+300
+            pts2[3][0][1] = pts1[3][0][1]
+            pts2[3][0][0] = pts1[3][0][0]
 
-            pts2[2][0][0] = pts1[0][0][0]+190
-            pts2[2][0][1] = pts1[0][0][1] - \
-                distance_2_points(pts1[0][0], pts1[2][0])+300
+            pts2[0][0][1] = pts1[0][0][1]
+            pts2[0][0][0] = pts1[0][0][0] + \
+                distance_2_points(pts1[1][0], pts1[0][0])
 
-            pts2[3][0][0] = pts1[1][0][0]+190
-            pts2[3][0][1] = pts1[1][0][1] - \
-                distance_2_points(pts1[1][0], pts1[3][0]) + 300
+            pts2[2][0][1] = pts1[2][0][1]
+            pts2[2][0][0] = pts1[2][0][0] - \
+                distance_2_points(pts1[2][0], pts1[3][0])
+
             return cv2.getPerspectiveTransform(pts1, pts2)
 
         return 0
-
-    def video_callback(self, data):
-        image = self.bridge.imgmsg_to_cv2(data)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        points = self.get_pointcloud(image)
-        self.pub.publish(points)
 
     def get_pointcloud(self, image):
         try:
             dst = cv2.undistort(
                 image, self.mtx, self.dist, None, self.newcameramtx)
+
+            # Bug
+            # Warp perspective isn't calibrated well enough
+            # warp perspective produces the bug
             warped = cv2.warpPerspective(
                 dst, self.h_mtx, (700, 500), None)
             hsv = cv2.cvtColor(warped, cv2.COLOR_RGB2HSV)
@@ -117,13 +109,18 @@ class lane_to_pointcloud():
 
             result = cv2.add(yellow_left_edge, white_right_edge)
             # 350:, 200:500
-            result = result[470:, 200:500]
+            #result = result[:, 200:500]
             img_msg = self.bridge.cv2_to_imgmsg(result)
-            self.img_pub.publish(img_msg)
+            #self.img_pub.publish(img_msg)
 
             features = cv2.goodFeaturesToTrack(result, 500, 0.01, 0.1)
+
+            ############################
+            # Bug
+            # Here features are nonetype
             features = np.int0(features)
-            #result = cv2.line(result, (350, 0), (350, 500), (0, 0, 0))
+
+            # result = cv2.line(result, (350, 0), (350, 500), (0, 0, 0))
             points = []
             for feature in features:
                 w = feature[0][0]
@@ -133,7 +130,7 @@ class lane_to_pointcloud():
                 y = (200 - h)/177.147
                 z = 0.2
 
-                point = [y- 0.9, x-0.21, z]
+                point = [y - 0.9, x-0.21, z]
                 points.append(point)
 
             fields = [PointField('x', 0, PointField.FLOAT32, 1),
@@ -148,14 +145,13 @@ class lane_to_pointcloud():
         except CvBridgeError:
             print(CvBridgeError)
 
-    def main(self):
-        rospy.spin()
-
 
 def distance_2_points(point1, point2):
+    # point is array of w,h coordinates of an image
     delta_w = point1[0]-point2[0]
     delta_h = point1[1]-point2[1]
-    return math.sqrt(math.pow(delta_w, 2) + math.pow(delta_h, 2))
+    # return math.sqrt(math.pow(delta_w, 2) + math.pow(delta_h, 2))
+    return abs(delta_w)
 
 
 def emphasize_left_corner(src):
@@ -164,12 +160,3 @@ def emphasize_left_corner(src):
         img = cv2.Sobel(img, cv2.CV_32FC1, 1, 0, ksize=5)
         img[img < 0] = 0
     return img
-
-
-if __name__ == '__main__':
-    try:
-        rospy.init_node('lane_to_pointcloud', anonymous=False)
-        lane2pcl = lane_to_pointcloud()
-        lane2pcl.main()
-    except rospy.ROSInterruptException:
-        pass
